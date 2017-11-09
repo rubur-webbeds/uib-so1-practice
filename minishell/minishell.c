@@ -3,6 +3,7 @@
 char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = null
 char sep[6] = " #\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit"};
+const int NUM_COM = 5;
 
 int main(){
   char *line = malloc(COMMAND_LINE_SIZE);
@@ -71,8 +72,9 @@ int execute_line(char *line){
     case 4:
       exit(0);
       break;
-    default:
+    case 5:
       external_command(params);
+      break;
   }
   return 0;
 }
@@ -107,6 +109,9 @@ int check_internal(char **args){
 	while(cmp != 0){
 		i++;
 		cmp = strcmp(args[0], commands[i]);
+    if(i > NUM_COM - 1){
+      printf("%d\n", i);;
+    }
 	}
 
 	return i;
