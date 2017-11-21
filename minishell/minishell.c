@@ -117,8 +117,42 @@ int check_internal(char **args){
 }
 
 int internal_cd(char **args){
-  printf("Do shit in cd\n");
-  return 0;
+  int re; //return value
+
+  char *path = args[1];
+  char *dir;
+
+  //checking paramaters
+  if(args[2] != NULL){
+    printf("ERROR: INCORRECT SYNTAX.\n");
+    printf("USAGE: $ cd [path]\n");
+    re = -1;
+  }
+
+  // $ cd HOME
+  if(path == NULL){
+    char *HOME;
+    getenv("HOME");
+  }
+
+  //getting current working directory
+  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
+    perror("ERROR:");
+    re = -1;
+  }
+  printf("Current Working Directory: %s\n", dir);
+
+  //change definitely working directory
+  chdir(path);
+
+  //getting current working directory after changing it
+  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
+    perror("ERROR:");
+    re = -1;
+  }
+  printf("Current Working Directory: %s\n", dir);
+
+  return re;
 }
 int internal_export(char **args){
   printf("Do shit in export\n");
