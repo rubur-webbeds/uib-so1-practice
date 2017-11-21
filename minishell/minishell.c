@@ -2,7 +2,8 @@
 
 char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = null
 char sep[6] = " #\r\n\t";
-char *commands[] = {"cd", "export", "source", "jobs", "exit", NULL};
+char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
+
 
 int main(){
   char *line = malloc(COMMAND_LINE_SIZE);
@@ -105,6 +106,9 @@ int check_internal(char **args){
 
 	cmp = strcmp(args[0], commands[i]);
 	while(cmp != 0){
+    if(strcmp(commands[i], "NULL") == 0){
+      return i;
+    }
 		i++;
 		cmp = strcmp(args[0], commands[i]);
 	}
