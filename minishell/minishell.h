@@ -18,3 +18,5 @@ int internal_export(char **args);
 int internal_source(char **args);
 int internal_jobs(char **args);
 int external_command(char **args);
+int check_symbol(char *str, char symbol);
+int add_pre_suf(char *str, char prefix, char suffix);

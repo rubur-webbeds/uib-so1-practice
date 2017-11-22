@@ -97,9 +97,10 @@ int parse_args(char **args, char *line){
 }
 
 /*
-Parses a line into tokens
-INPUT PARAM: args as a ptr to the parsed params and line as a ptr to read from
-OUTPUT PARAM:
+Checks if a command is in our implemented command array
+if it doesn't match means it's an external command, which is tagged as "NULL"
+INPUT PARAM: args[0] is the command to check
+OUTPUT PARAM: the position in the commands array
 */
 int check_internal(char **args){
   int cmp, i = 0;
@@ -116,6 +117,12 @@ int check_internal(char **args){
 	return i;
 }
 
+/*
+Changes the working directory to the one specified
+if no directory is specified, then change directory to HOME
+INPUT PARAM: args[1] is the new directory
+OUTPUT PARAM: 0 -> OK, -1 -> ERROR
+*/
 int internal_cd(char **args){
   char *path = args[1];
   char *dir = malloc(COMMAND_LINE_SIZE);
@@ -134,7 +141,7 @@ int internal_cd(char **args){
   }
   printf("Current Working Directory: %s\n", dir);
 
-  // $ cd HOME
+  // $ cd null => cd HOME
   if(path == NULL){
     char *home;
     home = getenv("HOME");
@@ -143,6 +150,17 @@ int internal_cd(char **args){
       return -1;
     }
     return 0;
+  }
+
+  //checking if the directory contains any blank space
+  if(check_symbol(path, ' ') == 0){
+    //add quotes to the path so chdir() can succeed
+    add_pre_suf(path, '"', '"');
+    //change working directory
+    if(chdir(path) == -1){
+      perror("ERROR:");
+      return -1;
+    }
   }
 
   //change working directory
@@ -177,5 +195,31 @@ int internal_jobs(char **args){
 
 int external_command(char **args){
   printf("EXTERNAL\n");
+  return 0;
+}
+
+/*
+Checks if str contains any symbol
+INPUT PARAM: str is the string to check
+OUTPUT PARAM: 0 -> str has at least one symbol, -1 -> str does not have any symbol
+*/
+int check_symbol(char *str, char symbol){
+  while(str){
+    if(str == symbol){
+      printf("LO TIENE\n");
+      return 0;
+    }
+  }
+  return -1;
+}
+
+/*
+Concts prefix at the beginning of str and suffix at the end
+INPUT PARAM: str is the string to modify
+             prefix is the char to concat at the beginning
+             suffix is the char to concat at the end
+OUTPUT PARAM: 0 -> OK, -1 -> ERROR
+*/
+int add_pre_suf(char *str, char prefix, char suffix){
   return 0;
 }
