@@ -29,7 +29,7 @@ void print_prompt(){
   char *prompt = malloc(100);
   getcwd(prompt, 100);
 
-  strcat(prompt, "$");
+  strcat(prompt, "$ ");
   printf("%s", prompt);
   free(prompt);
 }
@@ -117,7 +117,49 @@ int check_internal(char **args){
 }
 
 int internal_cd(char **args){
-  printf("Do shit in cd\n");
+  char *path = args[1];
+  char *dir = malloc(COMMAND_LINE_SIZE);
+
+  //checking paramaters
+  if(args[2] != NULL){
+    printf("ERROR: INCORRECT SYNTAX.\n");
+    printf("USAGE: $ cd [path]\n");
+    return  -1;
+  }
+
+  //getting current working directory
+  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
+    perror("ERROR:");
+    return -1;
+  }
+  printf("Current Working Directory: %s\n", dir);
+
+  // $ cd HOME
+  if(path == NULL){
+    char *home;
+    home = getenv("HOME");
+    if(chdir(home) == -1){
+      perror("ERROR:");
+      return -1;
+    }
+    return 0;
+  }
+
+  //change working directory
+  if(chdir(path) == -1){
+    perror("ERROR:");
+    return -1;
+  }
+
+  //getting current working directory after changing it
+  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
+    perror("ERROR:");
+    return -1;
+  }
+  printf("New Working Directory: %s\n", dir);
+
+  free(dir);
+
   return 0;
 }
 int internal_export(char **args){
