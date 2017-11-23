@@ -181,7 +181,21 @@ int internal_cd(char **args){
   return 0;
 }
 int internal_export(char **args){
-  printf("Do shit in export\n");
+  char *envar = args[1];
+
+  //checking paramaters
+  if(envar == NULL || args[2] != NULL){
+    printf("ERROR: INCORRECT SYNTAX.\n");
+    printf("USAGE: $ export [NAME]=[VALUE]\n");
+    return  -1;
+  }
+
+  char *name, value;
+  name = malloc(COMMAND_LINE_SIZE);
+  value = malloc(COMMAND_LINE_SIZE)
+  while(envar){
+
+  }
   return 0;
 }
 int internal_source(char **args){
