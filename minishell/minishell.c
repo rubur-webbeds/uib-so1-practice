@@ -1,7 +1,7 @@
 #include "minishell.h"
 
 char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = null
-char sep[6] = " #\r\n\t";
+char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 
 
@@ -152,17 +152,6 @@ int internal_cd(char **args){
     return 0;
   }
 
-  //checking if the directory contains any blank space
-  if(check_symbol(path, ' ') == 0){
-    //add quotes to the path so chdir() can succeed
-    add_pre_suf(path, '"', '"');
-    //change working directory
-    if(chdir(path) == -1){
-      perror("ERROR:");
-      return -1;
-    }
-  }
-
   //change working directory
   if(chdir(path) == -1){
     perror("ERROR:");
@@ -181,21 +170,39 @@ int internal_cd(char **args){
   return 0;
 }
 int internal_export(char **args){
-  char *envar = args[1];
+  char *name = args[1];
+  char *value = args[2];
 
   //checking paramaters
-  if(envar == NULL || args[2] != NULL){
+  if(args[1] == NULL || args[2] == NULL || args[3] != NULL){
     printf("ERROR: INCORRECT SYNTAX.\n");
     printf("USAGE: $ export [NAME]=[VALUE]\n");
     return  -1;
   }
 
-  char *name, value;
-  name = malloc(COMMAND_LINE_SIZE);
-  value = malloc(COMMAND_LINE_SIZE)
-  while(envar){
-
+  //get current value of NAME
+  char *current_value = getenv(name);
+  if(current_value == NULL){
+    perror("ERROR:");
+    return -1;
   }
+  printf("Current Value: %s\n", current_value);
+
+  //set new value to NAME
+  //int setenv(const char *envname, const char *envval, int overwrite);
+  if(setenv(name, value, 1) == -1){
+    perror("ERROR:");
+    return -1;
+  }
+
+  //get new current value
+  current_value = getenv(name);
+  if(current_value == NULL){
+    perror("ERROR:");
+    return -1;
+  }
+  printf("Current Value: %s\n", current_value);
+
   return 0;
 }
 int internal_source(char **args){
@@ -209,31 +216,5 @@ int internal_jobs(char **args){
 
 int external_command(char **args){
   printf("EXTERNAL\n");
-  return 0;
-}
-
-/*
-Checks if str contains any symbol
-INPUT PARAM: str is the string to check
-OUTPUT PARAM: 0 -> str has at least one symbol, -1 -> str does not have any symbol
-*/
-int check_symbol(char *str, char symbol){
-  while(str){
-    if(str == symbol){
-      printf("LO TIENE\n");
-      return 0;
-    }
-  }
-  return -1;
-}
-
-/*
-Concts prefix at the beginning of str and suffix at the end
-INPUT PARAM: str is the string to modify
-             prefix is the char to concat at the beginning
-             suffix is the char to concat at the end
-OUTPUT PARAM: 0 -> OK, -1 -> ERROR
-*/
-int add_pre_suf(char *str, char prefix, char suffix){
   return 0;
 }
