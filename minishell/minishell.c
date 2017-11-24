@@ -1,7 +1,7 @@
 #include "minishell.h"
 
 char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = null
-char sep[6] = " #\r\n\t";
+char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 
 
@@ -97,9 +97,10 @@ int parse_args(char **args, char *line){
 }
 
 /*
-Parses a line into tokens
-INPUT PARAM: args as a ptr to the parsed params and line as a ptr to read from
-OUTPUT PARAM:
+Checks if a command is in our implemented command array
+if it doesn't match means it's an external command, which is tagged as "NULL"
+INPUT PARAM: args[0] is the command to check
+OUTPUT PARAM: the position in the commands array
 */
 int check_internal(char **args){
   int cmp, i = 0;
@@ -116,6 +117,12 @@ int check_internal(char **args){
 	return i;
 }
 
+/*
+Changes the working directory to the one specified
+if no directory is specified, then change directory to HOME
+INPUT PARAM: args[1] is the new directory
+OUTPUT PARAM: 0 -> OK, -1 -> ERROR
+*/
 int internal_cd(char **args){
   char *path = args[1];
   char *dir = malloc(COMMAND_LINE_SIZE);
@@ -134,7 +141,7 @@ int internal_cd(char **args){
   }
   printf("Current Working Directory: %s\n", dir);
 
-  // $ cd HOME
+  // $ cd null => cd HOME
   if(path == NULL){
     char *home;
     home = getenv("HOME");
@@ -163,7 +170,39 @@ int internal_cd(char **args){
   return 0;
 }
 int internal_export(char **args){
-  printf("Do shit in export\n");
+  char *name = args[1];
+  char *value = args[2];
+
+  //checking paramaters
+  if(args[1] == NULL || args[2] == NULL || args[3] != NULL){
+    printf("ERROR: INCORRECT SYNTAX.\n");
+    printf("USAGE: $ export [NAME]=[VALUE]\n");
+    return  -1;
+  }
+
+  //get current value of NAME
+  char *current_value = getenv(name);
+  if(current_value == NULL){
+    perror("ERROR:");
+    return -1;
+  }
+  printf("Current Value: %s\n", current_value);
+
+  //set new value to NAME
+  //int setenv(const char *envname, const char *envval, int overwrite);
+  if(setenv(name, value, 1) == -1){
+    perror("ERROR:");
+    return -1;
+  }
+
+  //get new current value
+  current_value = getenv(name);
+  if(current_value == NULL){
+    perror("ERROR:");
+    return -1;
+  }
+  printf("Current Value: %s\n", current_value);
+
   return 0;
 }
 int internal_source(char **args){
