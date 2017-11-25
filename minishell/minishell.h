@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/types.h>
 
 #define COMMAND_LINE_SIZE 1024
 #define PARAM_SIZE 3
