@@ -1,0 +1,6 @@
+echo a
+echo aa
+cd dummyfolder
+cd ..
+export TEST=test3
+echo bye

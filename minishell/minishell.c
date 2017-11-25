@@ -205,8 +205,36 @@ int internal_export(char **args){
 
   return 0;
 }
+
+/*
+reades a file and executes every command in it
+INPUT PARAM: args[1] as the name of the script
+OUTPUT PARAM: 0 -> OK, -1 -> ERROR
+*/
 int internal_source(char **args){
-  printf("Do shit in source\n");
+  char *filename = args[1];
+  char line[COMMAND_LINE_SIZE];
+
+  //checking paramaters
+  if(args[1] == NULL || args[2] != NULL){
+    printf("ERROR: INCORRECT SYNTAX.\n");
+    printf("USAGE: $ source [filename]\n");
+    return  -1;
+  }
+
+  //opening the file to execute
+  FILE *file = fopen(filename, "r");
+  if(file == NULL){
+    perror("fopen() ERROR");
+    return -1;
+  }
+
+  //reading and executing each line
+  while(fgets(line, COMMAND_LINE_SIZE, file) != NULL){
+    execute_line(line);
+  }
+  fclose(file);
+
   return 0;
 }
 int internal_jobs(char **args){
