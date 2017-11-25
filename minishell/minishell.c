@@ -8,7 +8,7 @@ char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 int main(){
   char *line = malloc(COMMAND_LINE_SIZE);
   if(line == NULL){
-    perror("ERROR");
+    perror("main() ERROR");
     return -1;
   }
 
@@ -52,7 +52,7 @@ OUTPUT PARAM: 0 = OK, otherwise -1
 */
 int execute_line(char *line){
   if(parse_args(params, line) < 0){
-    perror("ERROR");
+    perror("parse_args() ERROR");
     return -1;
   }
   int chck = check_internal(params);
@@ -135,8 +135,8 @@ int internal_cd(char **args){
   }
 
   //getting current working directory
-  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
-    perror("ERROR:");
+  if(getcwd(dir, COMMAND_LINE_SIZE) == NULL){
+    perror("getcwd() ERROR");
     return -1;
   }
   printf("Current Working Directory: %s\n", dir);
@@ -146,7 +146,7 @@ int internal_cd(char **args){
     char *home;
     home = getenv("HOME");
     if(chdir(home) == -1){
-      perror("ERROR:");
+      perror("chdir(HOME) ERROR");
       return -1;
     }
     return 0;
@@ -154,13 +154,13 @@ int internal_cd(char **args){
 
   //change working directory
   if(chdir(path) == -1){
-    perror("ERROR:");
+    perror("chdir(path) ERROR");
     return -1;
   }
 
   //getting current working directory after changing it
-  if(getcwd(dir, COMMAND_LINE_SIZE) == -1){
-    perror("ERROR:");
+  if(getcwd(dir, COMMAND_LINE_SIZE) == NULL){
+    perror("getcwd() ERROR");
     return -1;
   }
   printf("New Working Directory: %s\n", dir);
@@ -183,7 +183,7 @@ int internal_export(char **args){
   //get current value of NAME
   char *current_value = getenv(name);
   if(current_value == NULL){
-    perror("ERROR:");
+    perror("getenv() ERROR");
     return -1;
   }
   printf("Current Value: %s\n", current_value);
@@ -191,14 +191,14 @@ int internal_export(char **args){
   //set new value to NAME
   //int setenv(const char *envname, const char *envval, int overwrite);
   if(setenv(name, value, 1) == -1){
-    perror("ERROR:");
+    perror("set env() ERROR");
     return -1;
   }
 
   //get new current value
   current_value = getenv(name);
   if(current_value == NULL){
-    perror("ERROR:");
+    perror("getenv() ERROR");
     return -1;
   }
   printf("Current Value: %s\n", current_value);
@@ -214,7 +214,27 @@ int internal_jobs(char **args){
   return 0;
 }
 
+/*
+executes a foreign command using fork() to create another process
+and execvp() to execute the command
+INPUT PARAM: args as the parsed command line
+OUTPUT PARAM: 0 -> OK, -1 -> ERROR
+*/
 int external_command(char **args){
-  printf("EXTERNAL\n");
+  char *command = args[0];
+  pid_t pid;
+
+  pid = fork();
+  if(pid == 0){ //son
+    execvp(command, args); //execvp doesn't return anything
+    //code here only executes if execvp fails
+    perror("execvp() ERROR");
+    exit(-1);
+  }else if(pid > 0){ //father
+    wait(NULL);
+  }else{ //error
+    perror("fork() ERROR");
+    return -1;
+  }
   return 0;
 }
