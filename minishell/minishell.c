@@ -3,7 +3,7 @@
 char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = null
 char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
-
+static struct info_process process_list[N_JOBS];
 
 int main(){
   char *line = malloc(COMMAND_LINE_SIZE);
@@ -52,29 +52,14 @@ OUTPUT PARAM: 0 = OK, otherwise -1
 */
 int execute_line(char *line){
   if(parse_args(params, line) < 0){
-    perror("parse_args() ERROR");
+    printf("ERROR: parse_args()\n");
     return -1;
   }
   int chck = check_internal(params);
-  switch (chck) {
-    case 0:
-      internal_cd(params);
-      break;
-    case 1:
-      internal_export(params);
-      break;
-    case 2:
-      internal_source(params);
-      break;
-    case 3:
-      internal_jobs(params);
-      break;
-    case 4:
-      exit(0);
-      break;
-    default:
-      external_command(params);
+  if(chck == -1){
+    external_command(params, line);
   }
+
   return 0;
 }
 
@@ -108,13 +93,30 @@ int check_internal(char **args){
 	cmp = strcmp(args[0], commands[i]);
 	while(cmp != 0){
     if(strcmp(commands[i], "NULL") == 0){
-      return i;
+      return -1;
     }
 		i++;
 		cmp = strcmp(args[0], commands[i]);
 	}
 
-	return i;
+  switch (i) {
+    case 0:
+      internal_cd(params);
+      break;
+    case 1:
+      internal_export(params);
+      break;
+    case 2:
+      internal_source(params);
+      break;
+    case 3:
+      internal_jobs(params);
+      break;
+    case 4:
+      exit(0);
+    }
+
+    return 0;
 }
 
 /*
@@ -248,21 +250,33 @@ and execvp() to execute the command
 INPUT PARAM: args as the parsed command line
 OUTPUT PARAM: 0 -> OK, -1 -> ERROR
 */
-int external_command(char **args){
+int external_command(char **args, char *line){
   char *command = args[0];
   pid_t pid;
 
   pid = fork();
   if(pid == 0){ //son
+    signal(SIGINT, SIG_DFL);
+    signal(SIGCHLD, SIG_DFL);
+
     execvp(command, args); //execvp doesn't return anything
     //code here only executes if execvp fails
     perror("execvp() ERROR");
     exit(-1);
   }else if(pid > 0){ //father
+    process_list[0].pid = pid; //the foreground process PID is 'pid'
     wait(NULL);
+    //while(process_list[0].pid != 0){
+    //  pause();
+    //}
   }else{ //error
     perror("fork() ERROR");
     return -1;
   }
   return 0;
+}
+
+//SIGCHLD handler
+void reaper(int signum){
+  signal(SIGCHLD, reaper);
 }

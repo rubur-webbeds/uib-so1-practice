@@ -1,6 +1,5 @@
 echo a
-echo aa
 cd dummyfolder
-cd ..
 export TEST=test3
+sleep 3
 echo bye

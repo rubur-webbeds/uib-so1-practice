@@ -7,6 +7,7 @@
 
 #define COMMAND_LINE_SIZE 1024
 #define PARAM_SIZE 3
+#define N_JOBS 10
 
 //MINISHELL FUNCTIONS
 void print_prompt();
@@ -18,4 +19,12 @@ int internal_cd(char **args);
 int internal_export(char **args);
 int internal_source(char **args);
 int internal_jobs(char **args);
-int external_command(char **args);
+int external_command(char **args, char *line);
+void reaper(int signum);
+
+//PROCESS STRUCT
+struct info_process {
+    pid_t pid;
+    char status; // ’X’ of executing or ‘S’ of stopped
+    char command_line[COMMAND_LINE_SIZE];
+};
