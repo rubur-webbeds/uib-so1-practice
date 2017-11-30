@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define COMMAND_LINE_SIZE 1024
 #define PARAM_SIZE 3
@@ -21,6 +23,7 @@ int internal_source(char **args);
 int internal_jobs(char **args);
 int external_command(char **args, char *line);
 void reaper(int signum);
+void ctrlc(int signum);
 
 //PROCESS STRUCT
 struct info_process {
