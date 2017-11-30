@@ -6,6 +6,10 @@ char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 static struct info_process process_list[N_JOBS];
 
 int main(){
+
+  signal(SIGINT, ctrlc);
+  signal(SIGCHLD, reaper);
+
   char *line = malloc(COMMAND_LINE_SIZE);
   if(line == NULL){
     perror("main() ERROR");
@@ -41,7 +45,15 @@ OUTPUT PARAM: ptr to the read line
 */
 char *read_line(char *line){
   print_prompt();
-  fgets(line, COMMAND_LINE_SIZE, stdin);
+  char *ptr;
+
+  ptr = fgets(line, COMMAND_LINE_SIZE, stdin);
+
+  if (!ptr && !feof(stdin)){
+    ptr = line;
+    ptr[0] = 0;
+  }
+
   return line;
 }
 
@@ -265,10 +277,10 @@ int external_command(char **args, char *line){
     exit(-1);
   }else if(pid > 0){ //father
     process_list[0].pid = pid; //the foreground process PID is 'pid'
-    wait(NULL);
-    //while(process_list[0].pid != 0){
-    //  pause();
-    //}
+    //wait(NULL);
+    while(process_list[0].pid != 0){
+      pause();
+    }
   }else{ //error
     perror("fork() ERROR");
     return -1;
@@ -279,4 +291,21 @@ int external_command(char **args, char *line){
 //SIGCHLD handler
 void reaper(int signum){
   signal(SIGCHLD, reaper);
+
+  pid_t dead = waitpid(-1, NULL, WNOHANG);
+  if(dead == process_list[0].pid){ //if the foreground process has died...
+    printf("+ FINISHED PROCESS [%d]\n", dead);
+    process_list[0].pid = 0;
+  }
+}
+
+//SIGINT handler
+void ctrlc(int signum){
+  signal(SIGINT, ctrlc);
+
+  if(process_list[0].pid > 0){ //if the foreground process doesn't finished yet...
+    kill(process_list[0].pid, SIGINT);
+  }
+
+  printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
 }
