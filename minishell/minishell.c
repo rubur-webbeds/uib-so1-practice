@@ -4,11 +4,13 @@ char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = n
 char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 static struct info_process process_list[N_JOBS];
+static int n_pids; //number of executing processes
 
 int main(){
 
   signal(SIGINT, ctrlc);
   signal(SIGCHLD, reaper);
+  signal(SIGTSTP, ctrlz);
 
   char *line = malloc(COMMAND_LINE_SIZE);
   if(line == NULL){
@@ -49,11 +51,14 @@ char *read_line(char *line){
 
   ptr = fgets(line, COMMAND_LINE_SIZE, stdin);
 
-  if (!ptr && !feof(stdin)){
-    ptr = line;
-    ptr[0] = 0;
-  }
 
+  if (!ptr) {
+    if (feof(stdin)){
+      /////////( TDOO
+      return NULL;
+    }
+    line[0] = 0;
+  }
   return line;
 }
 
@@ -63,10 +68,15 @@ INPUT PARAM: ptr to the line to be executed
 OUTPUT PARAM: 0 = OK, otherwise -1
 */
 int execute_line(char *line){
+  if (strlen(line) == 0) {
+    return 0;
+  }
+
   if(parse_args(params, line) < 0){
     printf("ERROR: parse_args()\n");
     return -1;
   }
+  int is_back = is_background(params);
   int chck = check_internal(params);
   if(chck == -1){
     external_command(params, line);
@@ -288,13 +298,29 @@ int external_command(char **args, char *line){
   return 0;
 }
 
+/*
+checks if the any of the args pased as parameter contains the '&' symbol
+INPUT PARAM: args as the parsed command line
+OUTPUT PARAM: 0 -> contains '&', -1 -> don't contains '&'
+*/
+int is_background(char **args){
+  int i = 0;
+  while(args[i] !=  NULL){
+    if(strcmp(args[i], "&") == 0){
+      return 0;
+    }
+    i++;
+  }
+  return -1;
+}
+
 //SIGCHLD handler
 void reaper(int signum){
   signal(SIGCHLD, reaper);
 
   pid_t dead = waitpid(-1, NULL, WNOHANG);
   if(dead == process_list[0].pid){ //if the foreground process has died...
-    printf("+ FINISHED PROCESS [%d]\n", dead);
+    //printf("+ FINISHED PROCESS [%d]\n", dead);
     process_list[0].pid = 0;
   }
 }
@@ -308,4 +334,11 @@ void ctrlc(int signum){
   }
 
   printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
+}
+
+//SIGSTP handler
+void ctrlz(int signum){
+  signal(SIGTSTP, ctrlz);
+  //add the process to process_list[n], n > 0 (0 is just for the fg process)
+  //change the status of the process from 'X' to 'S'
 }
