@@ -23,7 +23,6 @@ int main(){
     execute_line(line);
   }
   free(line);
-
   return 0;
 }
 
