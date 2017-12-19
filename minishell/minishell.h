@@ -24,6 +24,8 @@ int internal_jobs(char **args);
 int external_command(char **args, char *line);
 void reaper(int signum);
 void ctrlc(int signum);
+void ctrlz(int signum);
+int is_background(char **args);
 
 //PROCESS STRUCT
 struct info_process {
