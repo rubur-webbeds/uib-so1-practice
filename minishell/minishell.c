@@ -231,7 +231,7 @@ int internal_export(char **args){
 }
 
 /*
-reades a file and executes every command in it
+reads a file and executes every command in it
 INPUT PARAM: args[1] as the name of the script
 OUTPUT PARAM: 0 -> OK, -1 -> ERROR
 */
@@ -307,6 +307,7 @@ int is_background(char **args){
   int i = 0;
   while(args[i] !=  NULL){
     if(strcmp(args[i], "&") == 0){
+      args[i] = NULL;
       return 0;
     }
     i++;
