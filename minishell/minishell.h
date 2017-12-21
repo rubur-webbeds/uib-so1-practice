@@ -21,7 +21,7 @@ int internal_cd(char **args);
 int internal_export(char **args);
 int internal_source(char **args);
 int internal_jobs(char **args);
-int external_command(char **args, char *line);
+int external_command(char **args, char *line, int is_back);
 void reaper(int signum);
 void ctrlc(int signum);
 void ctrlz(int signum);

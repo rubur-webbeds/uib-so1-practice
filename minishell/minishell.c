@@ -79,7 +79,7 @@ int execute_line(char *line){
   int is_back = is_background(params);
   int chck = check_internal(params);
   if(chck == -1){
-    external_command(params, line);
+    external_command(params, line, is_back);
   }
 
   return 0;
@@ -272,21 +272,32 @@ and execvp() to execute the command
 INPUT PARAM: args as the parsed command line
 OUTPUT PARAM: 0 -> OK, -1 -> ERROR
 */
-int external_command(char **args, char *line){
+int external_command(char **args, char *line, int is_back){
   char *command = args[0];
   pid_t pid;
 
   pid = fork();
   if(pid == 0){ //son
-    signal(SIGINT, SIG_DFL);
     signal(SIGCHLD, SIG_DFL);
+    if(is_back == 0){
+      signal(SIGINT, SIG_IGN);
+
+    }else{
+      signal(SIGINT, SIG_DFL);
+    }
 
     execvp(command, args); //execvp doesn't return anything
     //code here only executes if execvp fails
     perror("execvp() ERROR");
     exit(-1);
   }else if(pid > 0){ //father
+    if(is_back == 0){
+      //job_add_list(pid)
+    }
     process_list[0].pid = pid; //the foreground process PID is 'pid'
+    if(is_back == 0){
+
+    }
     //wait(NULL);
     while(process_list[0].pid != 0){
       pause();
