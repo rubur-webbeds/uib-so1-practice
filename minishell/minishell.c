@@ -4,13 +4,13 @@ char *params[PARAM_SIZE]; //params[0] = instr, params[1] = params, params[2] = n
 char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 static struct info_process process_list[N_JOBS];
-static int n_pids; //number of executing processes
+static int n_pids = 1;
+
 
 int main(){
 
   signal(SIGINT, ctrlc);
   signal(SIGCHLD, reaper);
-  signal(SIGTSTP, ctrlz);
 
   char *line = malloc(COMMAND_LINE_SIZE);
   if(line == NULL){
@@ -23,7 +23,6 @@ int main(){
     execute_line(line);
   }
   free(line);
-
   return 0;
 }
 
@@ -51,14 +50,13 @@ char *read_line(char *line){
 
   ptr = fgets(line, COMMAND_LINE_SIZE, stdin);
 
-
-  if (!ptr) {
-    if (feof(stdin)){
-      /////////( TDOO
+  if (!ptr){
+    if (!feof(stdin)){
       return NULL;
     }
-    line[0] = 0;
+    line [0] = 0;
   }
+
   return line;
 }
 
@@ -68,20 +66,19 @@ INPUT PARAM: ptr to the line to be executed
 OUTPUT PARAM: 0 = OK, otherwise -1
 */
 int execute_line(char *line){
-  if (strlen(line) == 0) {
-    return 0;
-  }
-
   if(parse_args(params, line) < 0){
     printf("ERROR: parse_args()\n");
     return -1;
   }
-  int is_back = is_background(params);
+  int background = is_background (params);
+  if (background == 0) {
+    printf ("Is background\n");
+    return 0;
+  }
   int chck = check_internal(params);
   if(chck == -1){
     external_command(params, line, is_back);
   }
-
   return 0;
 }
 
@@ -231,7 +228,7 @@ int internal_export(char **args){
 }
 
 /*
-reads a file and executes every command in it
+reades a file and executes every command in it
 INPUT PARAM: args[1] as the name of the script
 OUTPUT PARAM: 0 -> OK, -1 -> ERROR
 */
@@ -262,7 +259,12 @@ int internal_source(char **args){
   return 0;
 }
 int internal_jobs(char **args){
-  printf("Do shit in jobs\n");
+  //printf("Do shit in jobs\n");
+  int i = 0;
+  while (i < n_pids){
+    printf ("[%d]\n",process_list[i].pid);
+    i++;
+  }
   return 0;
 }
 
@@ -309,31 +311,21 @@ int external_command(char **args, char *line, int is_back){
   return 0;
 }
 
-/*
-checks if the any of the args pased as parameter contains the '&' symbol
-INPUT PARAM: args as the parsed command line
-OUTPUT PARAM: 0 -> contains '&', -1 -> don't contains '&'
-*/
-int is_background(char **args){
-  int i = 0;
-  while(args[i] !=  NULL){
-    if(strcmp(args[i], "&") == 0){
-      args[i] = NULL;
-      return 0;
-    }
-    i++;
-  }
-  return -1;
-}
-
 //SIGCHLD handler
 void reaper(int signum){
   signal(SIGCHLD, reaper);
-
   pid_t dead = waitpid(-1, NULL, WNOHANG);
   if(dead == process_list[0].pid){ //if the foreground process has died...
-    //printf("+ FINISHED PROCESS [%d]\n", dead);
+    printf("+ FINISHED PROCESS [%d]\n", dead);
     process_list[0].pid = 0;
+  }
+  else {
+    int pos = jobs_lis_find(dead);
+    printf("Process with pid [%d] has finished",process_list[pos].pid);
+    int ctrl = jobs_list_remove(dead);
+    if (ctrl == -1){
+      printf ("Problems in reaper \n");
+    }
   }
 }
 
@@ -347,10 +339,83 @@ void ctrlc(int signum){
 
   printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
 }
+/*
+Boolean functions that will travel through all the list of arguments in search
+for an &, in which case it will return:
+TRUE (1): If found, in this case the last argument will be changed by a NULL one
+FALSE (0): If not found
+*/
+int is_background(char **args){
+  int i = 0;
+  while(args[i] != NULL){
+    // Asi por ejemplo una entrada con args[0] = & devolveria 1
+    if (strcmp (args[i],"&") == 0){
+      args[i] = NULL;
+      return 0;
+    }
+    i++;
+  }
+  return -1;
+}
+/*
+If the maximum number of alowed jobs has been archieved,
+we must add the pid to the array and add 1 to the globar variable n_pids.
+*/
+int jobs_list_add (pid_t pid,char status,char command_line){
+  if (n_pids < N_JOBS){
+    struct info_process new_process;
+    new_process.pid = pid;
+    new_process.status = status;
+    // I esto como lo metemos?
+    new_process.command_line [0] = command_line;
+    process_list[n_pids] = new_process;
+    n_pids ++;
+    return 0;
+  }
+  else printf("Maximum number of jobs archieved\n");
+  return -1;
+}
+/*
+Searches in the pid array te position of the received pid and returns it position.
+*/
+int jobs_lis_find (pid_t pid){
+int i = 0;
+//N_JOBS o n_pids ??
+while (i < n_pids){
+  if (process_list[i].pid == pid){
+    return i;
+  }
+  i++;
+}
+printf("Process not found\n" );
+return -1;
+}
+/*
+Receives as imput the pid number of the process we want to remove and moves the register
+of the last process of the list to the position of the removed process.
+Decrements the global variable n_pids.
+*/
+int jobs_list_remove (pid_t pid){
+int i = 1;  // position 0 reserved for foreground process
+while (i<n_pids){
+  if (process_list[i].pid == pid){
+    kill (pid,SIGINT);
+    if (i == n_pids -1){
+      n_pids --;
+      return 0;
+    }
+    process_list[i]=process_list[n_pids-1];
+    n_pids = n_pids -1;
+    return 0;
+  }
+}
+printf("Proces not found\n");
+return -1;
+}
+/*
+Boolean function that researches the argument line in search of ">"
+*/
+int is_output_redirection(char **args){
+  return 0;
 
-//SIGSTP handler
-void ctrlz(int signum){
-  signal(SIGTSTP, ctrlz);
-  //add the process to process_list[n], n > 0 (0 is just for the fg process)
-  //change the status of the process from 'X' to 'S'
 }
