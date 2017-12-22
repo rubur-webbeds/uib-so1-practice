@@ -5,12 +5,14 @@ char sep[7] = " #=\r\n\t";
 char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 static struct info_process process_list[N_JOBS];
 static int n_pids = 1;
+char command_line_global[COMMAND_LINE_SIZE];
 
 
 int main(){
 
   signal(SIGINT, ctrlc);
   signal(SIGCHLD, reaper);
+  signal(SIGTSTP, SIG_IGN);
 
   char *line = malloc(COMMAND_LINE_SIZE);
   if(line == NULL){
@@ -56,7 +58,7 @@ char *read_line(char *line){
     }
     line [0] = 0;
   }
-
+  strcpy(command_line_global, line);
   return line;
 }
 
@@ -71,13 +73,9 @@ int execute_line(char *line){
     return -1;
   }
   int background = is_background (params);
-  if (background == 0) {
-    printf ("Is background\n");
-    return 0;
-  }
   int chck = check_internal(params);
   if(chck == -1){
-    external_command(params, line);
+    external_command(params, line, background);
   }
   return 0;
 }
@@ -260,7 +258,7 @@ int internal_source(char **args){
 }
 int internal_jobs(char **args){
   //printf("Do shit in jobs\n");
-  int i = 0;
+  int i = 1;
   while (i < n_pids){
     printf ("[%d]\n",process_list[i].pid);
     i++;
@@ -274,24 +272,35 @@ and execvp() to execute the command
 INPUT PARAM: args as the parsed command line
 OUTPUT PARAM: 0 -> OK, -1 -> ERROR
 */
-int external_command(char **args, char *line){
+int external_command(char **args, char *line, int is_back){
   char *command = args[0];
   pid_t pid;
 
   pid = fork();
   if(pid == 0){ //son
-    signal(SIGINT, SIG_DFL);
     signal(SIGCHLD, SIG_DFL);
+    if(is_back == 0){
+      signal(SIGINT, SIG_IGN);
+
+    }else{
+      signal(SIGINT, SIG_DFL);
+    }
 
     execvp(command, args); //execvp doesn't return anything
     //code here only executes if execvp fails
     perror("execvp() ERROR");
     exit(-1);
   }else if(pid > 0){ //father
-    process_list[0].pid = pid; //the foreground process PID is 'pid'
-    //wait(NULL);
-    while(process_list[0].pid != 0){
-      pause();
+    if(is_back == 0){
+      if(jobs_list_add(pid, 'X', command_line_global) == -1){
+        printf("ERROR: jobs_list_add_list\n");
+      }
+    }else{
+      process_list[0].pid = pid; //the foreground process PID is 'pid'
+      //wait(NULL);
+      while(process_list[0].pid != 0){
+        pause();
+      }
     }
   }else{ //error
     perror("fork() ERROR");
@@ -310,7 +319,7 @@ void reaper(int signum){
   }
   else {
     int pos = jobs_lis_find(dead);
-    printf("Process with pid [%d] has finished",process_list[pos].pid);
+    printf("Process with pid [%d] has finished\n",process_list[pos].pid);
     int ctrl = jobs_list_remove(dead);
     if (ctrl == -1){
       printf ("Problems in reaper \n");
@@ -338,7 +347,7 @@ int is_background(char **args){
   int i = 0;
   while(args[i] != NULL){
     // Asi por ejemplo una entrada con args[0] = & devolveria 1
-    if (strcmp (args[i],"&") == 0){
+    if (strcmp (args[i], "&") == 0){
       args[i] = NULL;
       return 0;
     }
@@ -350,15 +359,16 @@ int is_background(char **args){
 If the maximum number of alowed jobs has been archieved,
 we must add the pid to the array and add 1 to the globar variable n_pids.
 */
-int jobs_list_add (pid_t pid,char status,char command_line){
+int jobs_list_add (pid_t pid,char status,char *command_line){
   if (n_pids < N_JOBS){
-    struct info_process new_process;
-    new_process.pid = pid;
-    new_process.status = status;
+    //struct info_process new_process;
+    process_list[n_pids].pid = pid;
+    process_list[n_pids].status = status;
     // I esto como lo metemos?
-    new_process.command_line [0] = command_line;
-    process_list[n_pids] = new_process;
-    n_pids ++;
+    //process_list[n_pids].command_line = command_line;
+    strcpy(process_list[n_pids].command_line, command_line);
+    //process_list[n_pids] = new_process;
+    n_pids++;
     return 0;
   }
   else printf("Maximum number of jobs archieved\n");
