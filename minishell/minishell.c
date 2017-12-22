@@ -260,7 +260,7 @@ int internal_jobs(char **args){
   //printf("Do shit in jobs\n");
   int i = 1;
   while (i < n_pids){
-    printf ("[%d]\n",process_list[i].pid);
+    printf("[%d] Status: %c :: %s", process_list[i].pid, process_list[i].status, process_list[i].command_line);
     i++;
   }
   return 0;
@@ -286,12 +286,14 @@ int external_command(char **args, char *line, int is_back){
       signal(SIGINT, SIG_DFL);
     }
 
+    is_output_redirection(args);
     execvp(command, args); //execvp doesn't return anything
     //code here only executes if execvp fails
     perror("execvp() ERROR");
     exit(-1);
   }else if(pid > 0){ //father
     if(is_back == 0){
+      printf("[%d] %d", n_pids, pid);
       if(jobs_list_add(pid, 'X', command_line_global) == -1){
         printf("ERROR: jobs_list_add_list\n");
       }
@@ -314,15 +316,14 @@ void reaper(int signum){
   signal(SIGCHLD, reaper);
   pid_t dead = waitpid(-1, NULL, WNOHANG);
   if(dead == process_list[0].pid){ //if the foreground process has died...
-    printf("+ FINISHED PROCESS [%d]\n", dead);
+    //printf("+ FINISHED PROCESS [%d]\n", dead);
     process_list[0].pid = 0;
-  }
-  else {
+  }else {
     int pos = jobs_lis_find(dead);
-    printf("Process with pid [%d] has finished\n",process_list[pos].pid);
-    int ctrl = jobs_list_remove(dead);
+    fprintf(stderr, "\nProcess with pid [%d] has finished\n", process_list[pos].pid);
+    int ctrl = jobs_list_remove(pos);
     if (ctrl == -1){
-      printf ("Problems in reaper \n");
+      printf("Problems in reaper\n");
     }
   }
 }
@@ -334,8 +335,8 @@ void ctrlc(int signum){
   if(process_list[0].pid > 0){ //if the foreground process doesn't finished yet...
     kill(process_list[0].pid, SIGINT);
   }
-
-  printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
+  printf("\n");
+  //printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
 }
 /*
 Boolean functions that will travel through all the list of arguments in search
@@ -394,11 +395,11 @@ Receives as imput the pid number of the process we want to remove and moves the 
 of the last process of the list to the position of the removed process.
 Decrements the global variable n_pids.
 */
-int jobs_list_remove (pid_t pid){
-int i = 1;  // position 0 reserved for foreground process
+int jobs_list_remove (int pos){
+/*int i = 1;  // position 0 reserved for foreground process
 while (i<n_pids){
   if (process_list[i].pid == pid){
-    kill (pid,SIGINT);
+    //kill (pid,SIGINT);
     if (i == n_pids -1){
       n_pids --;
       return 0;
@@ -406,15 +407,38 @@ while (i<n_pids){
     process_list[i]=process_list[n_pids-1];
     n_pids = n_pids -1;
     return 0;
-  }
-}
-printf("Proces not found\n");
-return -1;
+  }*/
+  if (pos < n_pids){
+		process_list[pos] = process_list[n_pids-1];
+		n_pids--;
+		return 0;
+		}
+	return -1;
 }
 /*
 Boolean function that researches the argument line in search of ">"
 */
 int is_output_redirection(char **args){
-  return 0;
+  int i = 0;
+  int file;
+  while(args[i] != NULL ){
+  if(strcmp(args[i], ">")== 0){
+    file = open(args[i + 1], O_WRONLY | O_CREAT, S_IRUSR|S_IWUSR);
+
+    if(file < 0){
+      perror("ERROR");
+    }
+    dup2(file, 1);
+    if(dup2(file, 1)== -1) {
+      fprintf(stderr, "Output redirection not possible\n");
+    }
+    close(file);
+
+    args[i] = NULL;
+    return 0;
+    }
+  i++;
+  }
+return -1;
 
 }

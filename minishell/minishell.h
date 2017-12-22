@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #define COMMAND_LINE_SIZE 1024
 #define PARAM_SIZE 3
@@ -27,7 +28,7 @@ void ctrlc(int signum);
 int is_background(char **args);
 int jobs_list_add (pid_t pid, char status, char *command_line);
 int jobs_lis_find (pid_t pid);
-int jobs_list_remove (pid_t pid);
+int jobs_list_remove (int pos);
 int is_output_redirection (char **args);
 
 //PROCESS STRUCT
