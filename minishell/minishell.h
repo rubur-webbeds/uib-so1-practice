@@ -25,6 +25,7 @@ int internal_jobs(char **args);
 int external_command(char **args, char *line, int is_back);
 void reaper(int signum);
 void ctrlc(int signum);
+void ctrlz(int signum);
 int is_background(char **args);
 int jobs_list_add (pid_t pid, char status, char *command_line);
 int jobs_lis_find (pid_t pid);

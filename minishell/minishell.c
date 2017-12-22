@@ -6,6 +6,7 @@ char *commands[] = {"cd", "export", "source", "jobs", "exit", "NULL"};
 static struct info_process process_list[N_JOBS];
 static int n_pids = 1;
 char command_line_global[COMMAND_LINE_SIZE];
+char prompt_global[100];
 
 
 int main(){
@@ -38,6 +39,7 @@ void print_prompt(){
 
   strcat(prompt, "$ ");
   printf("%s", prompt);
+  strcpy(prompt_global, prompt);
   free(prompt);
 }
 
@@ -220,7 +222,7 @@ int internal_export(char **args){
     perror("getenv() ERROR");
     return -1;
   }
-  printf("Current Value: %s\n", current_value);
+  printf("Current New Value: %s\n", current_value);
 
   return 0;
 }
@@ -257,10 +259,10 @@ int internal_source(char **args){
   return 0;
 }
 int internal_jobs(char **args){
-  //printf("Do shit in jobs\n");
+  printf("JOBS\n=====\n");
   int i = 1;
   while (i < n_pids){
-    printf("[%d] Status: %c :: %s", process_list[i].pid, process_list[i].status, process_list[i].command_line);
+    printf("[%d] - %d Status: %c :: %s", i, process_list[i].pid, process_list[i].status, process_list[i].command_line);
     i++;
   }
   return 0;
@@ -293,7 +295,7 @@ int external_command(char **args, char *line, int is_back){
     exit(-1);
   }else if(pid > 0){ //father
     if(is_back == 0){
-      printf("[%d] %d", n_pids, pid);
+      printf("[%d] %d\n", n_pids, pid);
       if(jobs_list_add(pid, 'X', command_line_global) == -1){
         printf("ERROR: jobs_list_add_list\n");
       }
@@ -338,11 +340,26 @@ void ctrlc(int signum){
   printf("\n");
   //printf("I'M NOT THE FG PROCESS, I WONT DIE: %d\n", getpid());
 }
+
+//SIGTSTP handler
+void ctrlz(int signum){
+  signal(SIGTSTP, ctrlz);
+
+  if(process_list[0].pid > 0){ //if the foreground process doesn't finished yet...
+    kill(process_list[0].pid, SIGTSTP);
+
+    printf("[%d] - %d Status: %c :: %s\n", n_pids, process_list[0].pid, 'S', process_list[0].command_line);
+    jobs_list_add(process_list[0].pid, 'S', process_list[0].command_line);
+
+    process_list[0].pid = 0;
+  }
+}
+
 /*
 Boolean functions that will travel through all the list of arguments in search
 for an &, in which case it will return:
-TRUE (1): If found, in this case the last argument will be changed by a NULL one
-FALSE (0): If not found
+TRUE (0): If found, in this case the last argument will be changed by a NULL one
+FALSE (-1): If not found
 */
 int is_background(char **args){
   int i = 0;
@@ -357,10 +374,10 @@ int is_background(char **args){
   return -1;
 }
 /*
-If the maximum number of alowed jobs has been archieved,
+If the maximum number of allowed jobs has been archieved,
 we must add the pid to the array and add 1 to the globar variable n_pids.
 */
-int jobs_list_add (pid_t pid,char status,char *command_line){
+int jobs_list_add (pid_t pid, char status, char *command_line){
   if (n_pids < N_JOBS){
     //struct info_process new_process;
     process_list[n_pids].pid = pid;
@@ -396,18 +413,6 @@ of the last process of the list to the position of the removed process.
 Decrements the global variable n_pids.
 */
 int jobs_list_remove (int pos){
-/*int i = 1;  // position 0 reserved for foreground process
-while (i<n_pids){
-  if (process_list[i].pid == pid){
-    //kill (pid,SIGINT);
-    if (i == n_pids -1){
-      n_pids --;
-      return 0;
-    }
-    process_list[i]=process_list[n_pids-1];
-    n_pids = n_pids -1;
-    return 0;
-  }*/
   if (pos < n_pids){
 		process_list[pos] = process_list[n_pids-1];
 		n_pids--;
@@ -423,7 +428,7 @@ int is_output_redirection(char **args){
   int file;
   while(args[i] != NULL ){
   if(strcmp(args[i], ">")== 0){
-    file = open(args[i + 1], O_WRONLY | O_CREAT, S_IRUSR|S_IWUSR);
+    file = open(args[i + 1], O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
 
     if(file < 0){
       perror("ERROR");
@@ -440,5 +445,4 @@ int is_output_redirection(char **args){
   i++;
   }
 return -1;
-
 }
