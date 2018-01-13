@@ -58,7 +58,7 @@ char *read_line(char *line){
     if (!feof(stdin)){
       return NULL;
     }
-    line [0] = 0;
+    line[0] = 0;
   }
   strcpy(command_line_global, line);
   return line;
