@@ -1,0 +1,5 @@
+echo a
+cd dummyfolder
+export TEST=test3
+sleep 3
+echo bye
