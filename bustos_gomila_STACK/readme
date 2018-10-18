@@ -1,0 +1,8 @@
+	El makefile sirve para compilar programas que hacen uso de varias librerias. Este nos permite automaizar el proceso de compilación.
+
+	Para poder usar un makefile a través de la consola únicamente tenemos que ejecutar la instruccón $make.
+	A continuación por pantalla aparecerán los archivos nuevos que se van creando (.o) y los ejecutables.
+
+	Una vez haya terminado, usando $./nombre_del_ejecutable podremos ver nuestro programa en acción.
+
+	Una opción del make es make clean, que elimina todos los archivos que ha creado. 
